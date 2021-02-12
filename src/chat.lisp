@@ -15,6 +15,8 @@
    #:get-username
    #:get-first-name
    #:get-last-name
+   #:get-group-title
+   #:get-supergroup-title
    #:chat
    #:private-chat
    #:get-chat-by-id
@@ -53,17 +55,35 @@
               :reader get-last-name)))
 
 
+(defclass group-chat (chat)
+  ((title :initarg :title
+          :reader get-group-title)))
+
+
+(defclass supergroup-chat (chat)
+  ((title :initarg :title
+          :reader get-supergroup-title)))
+
+
 (defun make-chat (data)
-  (unless (string-equal (getf data :|type|)
-                        "private")
-    (error "Only private chats are supported for now."))
-  
-  (make-instance 'private-chat
-                 :id (getf data :|id|)
-                 :username (getf data :|username|)
-                 :first-name (getf data :|first_name|)
-                 :last-name (getf data :|last_name|)
-                 :raw-data data))
+  (cond ((string-equal (getf data :|type|) "private")
+	 (make-instance 'private-chat
+			:id (getf data :|id|)
+			:username (getf data :|username|)
+			:first-name (getf data :|first_name|)
+			:last-name (getf data :|last_name|)
+			:raw-data data))
+	((string-equal (getf data :|type|) "group")
+	 (make-instance 'group-chat
+			:id (getf data :|id|)
+			:title (getf data :|title|)
+			:raw-data data))
+	((string-equal (getf data :|type|) "supergroup")
+	 (make-instance 'supergroup-chat
+			:id (getf data :|id|)
+			:title (getf data :|title|)
+			:raw-data data))
+	(t (error "Type of chat not supported."))))
 
 
 (defmethod print-object ((chat private-chat) stream)
@@ -73,6 +93,24 @@
             "id=~A username=~A"
             (get-chat-id chat)
             (get-username chat))))
+
+
+(defmethod print-object ((chat group-chat) stream)
+  (print-unreadable-object
+      (chat stream :type t)
+    (format stream
+            "id=~A title=~A"
+            (get-chat-id chat)
+            (get-group-title chat))))
+
+
+(defmethod print-object ((chat supergroup-chat) stream)
+  (print-unreadable-object
+      (chat stream :type t)
+    (format stream
+            "id=~A title=~A"
+            (get-chat-id chat)
+            (get-supergroup-title chat))))
 
 
 (defmethod prepare-arg ((arg (eql :chat)))
